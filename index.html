@@ -157,10 +157,10 @@ const layout=[
 const seating=document.getElementById('seating');
 const selected=new Map();
 const bookedByTime = {
-  '12:00 PM - 03:00 PM': new Set(['K5','K6','J8','I3','G4']),
-  '03:00 PM - 06:00 PM': new Set(['G5','F7','E2','D9']),
-  '06:00 PM - 09:00 PM': new Set(['C4','B3','A6']),
-  '09:00 PM - 12:00 AM': new Set(['A7'])
+  '12:00 PM - 03:00 PM': new Set(['','','','','']),
+  '03:00 PM - 06:00 PM': new Set(['','','','']),
+  '06:00 PM - 09:00 PM': new Set(['','','']),
+  '09:00 PM - 12:00 AM': new Set(['','','','','','',''])
 };
 let booked = bookedByTime[document.getElementById('time').value] || new Set();
 
