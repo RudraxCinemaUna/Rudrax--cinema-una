@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rudrax Cinema - Online Booking</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b0d12;color:#f5f5f5}
+.header{background:linear-gradient(135deg,#b40000,#ef2b2b);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20;box-shadow:0 5px 25px #0008}
+.logo{font-size:25px;font-weight:900;letter-spacing:.5px}.sub{font-size:12px;opacity:.85}
+.container{max-width:1250px;margin:auto;padding:22px}
+.card{background:#151922;border:1px solid #292e3a;border-radius:18px;padding:18px;margin-bottom:18px;box-shadow:0 12px 35px #0005}
+.controls{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+select,input{width:100%;background:#0e1118;color:#fff;border:1px solid #343a49;border-radius:10px;padding:12px;font-size:15px}
+label{display:block;font-size:12px;color:#aeb5c3;margin-bottom:6px}
+.screen{height:44px;margin:5px auto 30px;max-width:700px;background:linear-gradient(#eee,#8c8c8c);color:#111;display:flex;align-items:center;justify-content:center;border-radius:50% 50% 8px 8px/35% 35% 15% 15%;font-weight:800;letter-spacing:5px;box-shadow:0 0 35px #fff4}
+.seating-wrap{overflow-x:auto;padding:8px 2px 18px}
+.seating{min-width:940px;display:flex;flex-direction:column;gap:9px}
+.row{display:grid;grid-template-columns:40px 1fr 34px 1fr;align-items:center;gap:9px}
+.row-label{text-align:center;font-weight:800;color:#ddd}
+.side{display:grid;gap:7px}
+.side.left{grid-template-columns:repeat(9,1fr)}
+.side.right{grid-template-columns:repeat(9,1fr)}
+.side.right.short{grid-template-columns:repeat(5,1fr)}
+.side.plat-left-7{grid-template-columns:repeat(7,1fr)}
+.side.plat-right-4{grid-template-columns:repeat(4,1fr)}
+.side.plat-right-5{grid-template-columns:repeat(5,1fr)}
+.aisle{height:100%}
+.seat{height:37px;border:1px solid #687080;border-radius:5px;background:#eceff2;color:#16181d;font-weight:800;font-size:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;user-select:none}
+.seat:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.seat.gold{background:#d89b18;border-color:#f1c45b}
+.seat.platinum{background:#d94742;border-color:#ff7772;color:#fff}
+.seat.selected{background:#22c55e!important;border-color:#8cffad!important;color:#04150a;box-shadow:0 0 12px #22c55e88}
+.seat.booked{background:#4b5563!important;color:#aeb4bf;border-color:#596273;cursor:not-allowed;opacity:.65}
+.legend{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-top:10px;color:#c7ccd6;font-size:13px}
+.dot{width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:6px;border:1px solid #666}
+.layout-note{text-align:center;color:#8f98a8;font-size:12px;margin-top:10px}
+.bottom{display:grid;grid-template-columns:1fr 360px;gap:18px}
+.summary h2{margin-top:0}.price-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #292e3a}.total{font-size:22px;font-weight:900;padding-top:14px}
+.primary{width:100%;padding:14px;border:0;border-radius:11px;background:#e21d2b;color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-top:14px}
+.primary:hover{background:#ff3140}.primary:disabled{opacity:.45;cursor:not-allowed}
+.tiny{font-size:11px;color:#8992a2;margin-top:9px}
+.modal{display:none;position:fixed;inset:0;background:#000b;z-index:50;align-items:center;justify-content:center;padding:18px}
+.modal-box{width:min(480px,100%);background:#151922;border:1px solid #303746;border-radius:18px;padding:22px}
+.modal-box h2{margin-top:0}.close{float:right;background:none;color:#fff;border:0;font-size:25px;cursor:pointer}
+.success{background:#102819;border:1px solid #2f8a4b;padding:14px;border-radius:12px;margin-top:12px;display:none}
+@media(max-width:800px){
+ .controls{grid-template-columns:1fr}.bottom{grid-template-columns:1fr}
+ .header{padding:14px 16px}.container{padding:14px}
+}
+.pay-note{color:#aeb5c3;font-size:12px;line-height:1.5}
+@media(max-width:520px){.modal-box{padding:16px}.modal-box .primary{font-size:14px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div><div class="logo">🎬 RUDRAX CINEMA</div><div class="sub">UNA, GUJARAT • ONLINE TICKET BOOKING</div></div>
+  <div style="text-align:right;font-size:12px">₹150 Silver<br>₹200 Gold • ₹250 Platinum</div>
+</header>
+
+<main class="container">
+  <section class="card">
+    <div class="controls">
+      <div><label>Movie</label><select id="movie"><option value="">Select Movie</option><option>AWARAPAN 2</option><option>JANA NAYAGAN</option></select></div>
+      <div><label>Date</label><input id="date" type="date" required></div>
+      <div><label>Show Time</label><select id="time"><option>12:00 PM - 03:00 PM</option><option>03:00 PM - 06:00 PM</option><option>06:00 PM - 09:00 PM</option><option>09:00 PM - 12:00 AM</option></select></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="screen">SCREEN</div>
+    <div class="seating-wrap"><div id="seating" class="seating"></div></div>
+    <div class="legend">
+      <span><i class="dot" style="background:#eceff2"></i>Silver ₹150</span>
+      <span><i class="dot" style="background:#d89b18"></i>Gold ₹200</span>
+      <span><i class="dot" style="background:#d94742"></i>Platinum ₹250</span>
+      <span><i class="dot" style="background:#22c55e"></i>Selected</span>
+      <span><i class="dot" style="background:#4b5563"></i>Booked</span>
+    </div>
+    <div class="layout-note">Tap/click seats to select • A–K rows • 183 seats</div>
+  </section>
+
+  <section class="bottom">
+    <div class="card">
+      <h2>Booking Details</h2>
+      <div class="price-row"><span>Selected Seats</span><strong id="selectedSeats">None</strong></div>
+      <div class="price-row"><span>Silver</span><strong id="silverCount">0 × ₹150</strong></div>
+      <div class="price-row"><span>Gold</span><strong id="goldCount">0 × ₹200</strong></div>
+      <div class="price-row"><span>Platinum</span><strong id="platCount">0 × ₹250</strong></div>
+      <div class="total"><span>Total</span><span style="float:right" id="total">₹0</span></div>
+      <button class="primary" id="bookBtn" disabled>Proceed to Booking</button>
+      <div class="tiny">After selecting seats, continue with WhatsApp Booking.</div>
+    </div>
+    <div class="card">
+      <h2>Rudrax Cinema</h2>
+      <p style="color:#b9c0cd;line-height:1.6">Choose your movie, show and seats. The seat map follows the layout shown in your cinema seating chart.</p>
+      <p style="margin-bottom:5px"><b>Silver:</b> ₹150</p>
+      <p style="margin:5px 0"><b>Gold:</b> ₹200</p>
+      <p style="margin:5px 0"><b>Platinum:</b> ₹250</p>
+      <p style="color:#8f98a8;font-size:12px">Rows K–H: Silver • G–C: Gold • B–A: Platinum</p>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <button class="close" onclick="closeModal()">×</button>
+    <h2>Complete Booking</h2>
+    <label>Name</label><input id="name" placeholder="Enter customer name">
+    <br><br>
+    <label>Mobile Number</label><input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
+    <div id="modalSummary" style="margin-top:14px;color:#c7ccd6"></div>
+
+    <div style="margin-top:16px">
+      <button class="primary" style="margin-top:0;background:#16a34a" onclick="confirmWhatsAppBooking()">📱 WhatsApp Booking</button>
+    </div>
+<div style="font-size:12px;color:#aeb5c3;margin-bottom:10px">UPI ID: <b>Q449121997@ybl</b></div>
+      <button class="primary" style="margin-top:6px;background:#16a34a" onclick="paymentDone()">✅ Payment Done</button>
+    </div>
+
+    <div class="success" id="success"></div>
+  </div>
+</div>
+
+<script>
+const prices={Silver:150,Gold:200,Platinum:250};
+const layout=[
+  {row:'K',type:'Silver',left:9,right:9},
+  {row:'J',type:'Silver',left:9,right:9},
+  {row:'I',type:'Silver',left:9,right:9},
+  {row:'H',type:'Silver',left:9,right:9},
+  {row:'G',type:'Gold',left:9,right:9},
+  {row:'F',type:'Gold',left:9,right:9},
+  {row:'E',type:'Gold',left:9,right:9},
+  {row:'D',type:'Gold',left:9,right:9},
+  {row:'C',type:'Gold',left:9,right:5},
+  {row:'B',type:'Platinum',left:7,right:4},
+  {row:'A',type:'Platinum',left:9,right:5}
+];
+const seating=document.getElementById('seating');
+const selected=new Map();
+const booked=new Set(['K5','K6','J8','I3','G4','G5','F7','E2','D9','C4','B3','A6','A7']);
+
+function makeSide(row,type,count,start){
+  const side=document.createElement('div');
+  side.className='side '+(count===5?'short ':'')+
+    (type==='Platinum'&&count===7?'plat-left-7 ':'')+
+    (type==='Platinum'&&count===4?'plat-right-4 ':'')+
+    (type==='Platinum'&&count===5?'plat-right-5 ':'')+
+    (start===1?'left':'right');
+  for(let i=0;i<count;i++){
+    const n=start+i;
+    const id=row+n;
+    const s=document.createElement('button');
+    s.type='button'; s.className='seat '+type.toLowerCase();
+    s.textContent=n; s.dataset.id=id; s.dataset.type=type;
+    if(booked.has(id)) {s.classList.add('booked'); s.disabled=true;}
+    else s.addEventListener('click',()=>toggle(s));
+    side.appendChild(s);
+  }
+  return side;
+}
+layout.forEach(x=>{
+  const r=document.createElement('div'); r.className='row';
+  const lab=document.createElement('div'); lab.className='row-label'; lab.textContent=x.row;
+  r.appendChild(lab);
+  r.appendChild(makeSide(x.row,x.type,x.left,1));
+  const aisle=document.createElement('div'); aisle.className='aisle'; r.appendChild(aisle);
+  r.appendChild(makeSide(x.row,x.type,x.right,10));
+  seating.appendChild(r);
+});
+
+function toggle(btn){
+  const id=btn.dataset.id,type=btn.dataset.type;
+  if(selected.has(id)){selected.delete(id);btn.classList.remove('selected')}
+  else {selected.set(id,type);btn.classList.add('selected')}
+  update();
+}
+function update(){
+  let counts={Silver:0,Gold:0,Platinum:0}, subtotal=0;
+  selected.forEach(t=>{counts[t]++;subtotal+=prices[t]});
+  const seats=[...selected.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  document.getElementById('selectedSeats').textContent=seats.length?seats.join(', '):'None';
+  document.getElementById('silverCount').textContent=`${counts.Silver} × ₹150`;
+  document.getElementById('goldCount').textContent=`${counts.Gold} × ₹200`;
+  document.getElementById('platCount').textContent=`${counts.Platinum} × ₹250`;
+  document.getElementById('total').textContent=`₹${subtotal}`;
+  document.getElementById('bookBtn').disabled=!seats.length;
+}
+// Allow booking only from today through the next 7 days (inclusive).
+const dateInput=document.getElementById('date');
+const today=new Date();
+const pad=n=>String(n).padStart(2,'0');
+const toISO=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+dateInput.min=toISO(today);
+const maxDate=new Date(today); maxDate.setDate(maxDate.getDate()+7);
+dateInput.max=toISO(maxDate);
+dateInput.value=toISO(today);
+
+document.getElementById('bookBtn').onclick=()=>{
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('modalSummary').textContent=`${selected.size} seat(s) selected • ${document.getElementById('selectedSeats').textContent} • Total ${document.getElementById('total').textContent}`;
+};
+function closeModal(){document.getElementById('modal').style.display='none'}
+function getBookingData(){
+  const name=document.getElementById('name').value.trim();
+  const mobile=document.getElementById('mobile').value.trim();
+  if(!name || !/^\d{10}$/.test(mobile)){
+    showMessage('Please enter a valid name and 10-digit mobile number.', false);
+    return null;
+  }
+  if(!document.getElementById('movie').value){
+    showMessage('Please select a movie first.', false);
+    return null;
+  }
+  const booking='RDX'+Math.floor(100000+Math.random()*900000);
+  const movie=document.getElementById('movie').value;
+  const date=document.getElementById('date').value;
+  const time=document.getElementById('time').value;
+  const seats=[...selected.keys()].join(', ');
+  const total=document.getElementById('total').textContent;
+  return {booking,name,mobile,movie,date,time,seats,total};
+}
+
+function showMessage(text, ok=true){
+  const success=document.getElementById('success');
+  success.style.display='block';
+  success.style.background=ok?'#102819':'#3a2010';
+  success.style.borderColor=ok?'#2f8a4b':'#a66a25';
+  success.innerHTML=text;
+}
+
+function whatsappURLFor(data){
+  const whatsappNumber='919978999573';
+  const message =
+`🎬 RUDRAX CINEMA - NEW BOOKING
+
+🎟️ Booking ID: ${data.booking}
+👤 Customer Name: ${data.name}
+📱 Customer Mobile: ${data.mobile}
+
+🎞️ Movie: ${data.movie}
+📅 Date: ${data.date}
+🕐 Show Time: ${data.time}
+
+💺 Seats: ${data.seats}
+💰 Total Amount: ${data.total}
+
+Please confirm this booking.`;
+  return 'https://wa.me/'+whatsappNumber+'?text='+encodeURIComponent(message);
+}
+
+function paymentDone(){
+  const data=window.currentBooking;
+  if(!data) return;
+
+  // Front-end confirmation only. Real payment verification requires a payment gateway/backend.
+  showMessage(`Payment marked as done!<br><b>Booking ID: ${data.booking}</b><br>Seats: ${data.seats}<br>Total: ${data.total}`, true);
+
+  setTimeout(()=>{
+    window.open(whatsappURLFor(data),'_blank');
+  },500);
+}
+
+function confirmWhatsAppBooking(){
+  const data=getBookingData();
+  if(!data) return;
+  window.currentBooking=data;
+  showMessage(`Booking request ready.<br><b>Booking ID: ${data.booking}</b><br>WhatsApp will open with all booking details.`, true);
+  setTimeout(()=>{
+    window.open(whatsappURLFor(data),'_blank');
+  },300);
+}
+
+update();
+</script>
+</body>
+</html>
