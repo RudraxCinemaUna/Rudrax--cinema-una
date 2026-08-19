@@ -1,15 +1,11 @@
-// Rudrax Cinema - Firebase configuration
-// 1) Open Firebase Console -> Project settings -> Your apps -> Web app
-// 2) Copy your firebaseConfig object below.
-// 3) Do NOT put service-account/private keys here.
-
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT_ID",
-  storageBucket: "PASTE_YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
-  appId: "PASTE_YOUR_APP_ID"
+  apiKey: "AIzaSyAHX40ltNe9JcWotDBpxGcnXtjSXsE8h0k",
+  authDomain: "rudrax-cinema-2d57c.firebaseapp.com",
+  projectId: "rudrax-cinema-2d57c",
+  storageBucket: "rudrax-cinema-2d57c.firebasestorage.app",
+  messagingSenderId: "839769826313",
+  appId: "1:839769826313:web:4e610395fde347f7cc84d8",
+  measurementId: "G-6HDBTFS2C8"
 };
 
 window.RUDRAX_FIREBASE_CONFIG = firebaseConfig;
