@@ -1,23 +1,15 @@
-# Rudrax Cinema Online Booking
+# Rudrax Cinema — Live Seat Sync
 
-Full-stack starter: HTML/CSS/JavaScript frontend + Node.js/Express backend + SQLite database + Razorpay payment verification.
+This version uses a shared Node.js + SQLite backend instead of browser localStorage.
 
 ## Run
-1. Install Node.js 22.2+.
-2. Open this folder in terminal.
-3. Run `npm install`.
-4. Copy `.env.example` to `.env`.
-5. Put your Razorpay **Test Mode** Key ID and Key Secret in `.env`.
-6. Run `npm start`.
-7. Open `http://localhost:3000`.
+- Node.js 18+
+- `npm install`
+- `npm start`
+- Customer: `http://localhost:3000/`
+- Admin: `http://localhost:3000/admin.html`
 
-## Production
-- Use HTTPS.
-- Use Razorpay Live API keys only after testing.
-- Configure Razorpay auto-capture.
-- Add the webhook URL `https://YOUR-DOMAIN/api/payment/webhook` and the same webhook secret in `.env`.
-- Never put `RAZORPAY_KEY_SECRET` in frontend JavaScript.
-- For real seat locking at scale, add a short seat-hold/expiry transaction and an admin panel.
-- WhatsApp/SMS notifications can be added using an approved provider.
+## Deploy
+Deploy this whole folder to a Node.js host (for example Render/Railway/Fly.io) with `npm start`. GitHub Pages alone cannot run the Node/SQLite backend.
 
-The backend verifies the Razorpay signature before marking a booking CONFIRMED and also accepts `payment.captured` webhook events.
+After deployment, the customer site and admin use the same database. The APK must open the deployed customer URL, not an old packaged HTML copy.
