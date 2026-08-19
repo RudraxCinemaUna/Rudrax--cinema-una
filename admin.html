@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rudrax Cinema — Admin Seat Booking</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f5f5;color:#222}
+.header{background:#2b2d3a;color:#fff;padding:16px 5%;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:900}.logo span{color:#f84464}
+.container{max-width:1100px;margin:auto;padding:20px}
+.card{background:#fff;border-radius:9px;margin-bottom:18px;padding:18px;box-shadow:0 2px 8px #0001}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+label{display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:6px}
+select,input{width:100%;padding:12px;border:1px solid #ddd;border-radius:5px}
+.showBtns{display:flex;flex-wrap:wrap;gap:10px}
+.showBtn{padding:10px 16px;background:#fff;border:1px solid #aaa;border-radius:5px;cursor:pointer}
+.showBtn.active{border-color:#f84464;color:#f84464}
+.screen{height:40px;margin:10px auto 28px;max-width:650px;background:#ddd;border-radius:50% 50% 8px 8px;display:flex;align-items:center;justify-content:center;font-weight:bold;letter-spacing:5px}
+.seating{display:flex;flex-direction:column;gap:8px;overflow:auto}
+.row{display:grid;grid-template-columns:30px 1fr 24px 1fr;gap:7px;min-width:700px}
+.row-label{text-align:center;font-weight:bold;color:#777}
+.side{display:grid;gap:5px}.n9{grid-template-columns:repeat(9,1fr)}.n7{grid-template-columns:repeat(7,1fr)}
+.n5{grid-template-columns:repeat(5,1fr)}.n4{grid-template-columns:repeat(4,1fr)}
+.seat{height:32px;border:1px solid #aaa;border-radius:5px;background:#eee;font-size:10px;font-weight:bold;cursor:pointer}
+.seat.gold{background:#e2a72d;border-color:#c68d18}.seat.platinum{background:#d94a45;color:#fff}
+.seat.selected{background:#22c55e!important;color:#fff}.seat.booked{background:#777!important;color:#ccc;cursor:not-allowed}
+.legend{text-align:center;color:#777;font-size:12px;margin:15px}
+.bottom{position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;padding:14px;z-index:20}
+.summary{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.primary{background:#f84464;color:#fff;border:0;border-radius:5px;padding:13px 28px;font-weight:bold;cursor:pointer}
+.primary:disabled{opacity:.45}.status{font-size:12px;color:#777}
+.message{margin-top:12px;padding:10px;border-radius:6px;display:none}
+.success{background:#eaf8ed}.error{background:#fff0e0}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.summary{flex-direction:column;align-items:stretch}.primary{width:100%}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="logo">RUDRAX<span>CINEMA</span> — ADMIN</div>
+  <div id="status">🟡 Connecting to Firebase…</div>
+</header>
+
+<main class="container">
+<section class="card">
+  <h2 style="margin-top:0">🎟️ Admin Booking</h2>
+  <div class="grid">
+    <div><label>Movie</label>
+      <select id="movie">
+        <option value="">Select Movie</option>
+        <option value="AWARAPAN 2">AWARAPAN 2</option>
+        <option value="JANA NAYAGAN">JANA NAYAGAN</option>
+      </select>
+    </div>
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Customer Name (optional)</label><input id="customer" placeholder="Counter booking"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h3 style="margin-top:0">🕐 Select Show</h3>
+  <div class="showBtns" id="showBtns">
+    <button class="showBtn active" data-time="12:00 PM - 03:00 PM">12:00 PM</button>
+    <button class="showBtn" data-time="03:00 PM - 06:00 PM">03:00 PM</button>
+    <button class="showBtn" data-time="06:00 PM - 09:00 PM">06:00 PM</button>
+    <button class="showBtn" data-time="09:00 PM - 12:00 AM">09:00 PM</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0">💺 Select Seats</h2>
+  <div class="status" id="seatStatus">Select movie, date and show.</div>
+  <div class="screen">SCREEN</div>
+  <div id="seating" class="seating"></div>
+  <div class="legend">Silver ₹150 | Gold ₹200 | Platinum ₹250 | 🟩 Selected | ⬛ Already Booked</div>
+</section>
+</main>
+
+<div class="bottom">
+ <div class="summary">
+  <div><b>Selected:</b> <span id="selectedSeats">None</span><br><b>Total:</b> <span id="total">₹0</span></div>
+  <button class="primary" id="bookBtn" disabled>✅ Confirm Admin Booking</button>
+ </div>
+ <div id="message" class="message"></div>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import {getFirestore,collection,onSnapshot,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import "./firebase-config.js";
+
+const app=initializeApp(window.RUDRAX_FIREBASE_CONFIG);
+const db=getFirestore(app);
+const bookingsRef=collection(db,"bookings");
+
+const prices={Silver:150,Gold:200,Platinum:250};
+const layout=[
+ ['K','Silver',9,9],['J','Silver',9,9],['I','Silver',9,9],['H','Silver',9,9],
+ ['G','Gold',9,9],['F','Gold',9,9],['E','Gold',9,9],['D','Gold',9,9],
+ ['C','Gold',9,5],['B','Platinum',7,4],['A','Platinum',9,5]
+];
+
+let bookings=[],selected=new Map(),currentTime='12:00 PM - 03:00 PM';
+
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=new Date(),max=new Date(today);
+max.setDate(max.getDate()+6);
+
+$('date').min=iso(today);
+$('date').max=iso(max);
+$('date').value=iso(today);
+
+function key(){return [$('movie').value,$('date').value,currentTime].join('|')}
+
+function bookedSeats(){
+ const s=new Set();
+ bookings.filter(b=>b.key===key()).forEach(b=>(b.seats||[]).forEach(x=>s.add(x)));
+ return s;
+}
+
+function side(row,type,count,start){
+ const d=document.createElement('div');
+ d.className='side '+(count===9?'n9':count===7?'n7':count===5?'n5':'n4');
+ for(let i=0;i<count;i++){
+   const id=row+(start+i),b=document.createElement('button');
+   b.className='seat '+type.toLowerCase();
+   b.textContent=start+i;b.type='button';
+   if(bookedSeats().has(id)){b.classList.add('booked');b.disabled=true}
+   else b.onclick=()=>toggle(b,id,type);
+   d.appendChild(b);
+ }
+ return d;
+}
+
+function renderSeats(){
+ $('seating').innerHTML='';
+ selected.clear();
+ if(!$('movie').value){
+   $('seatStatus').textContent='🟡 Select a movie first.';
+   update(); return;
+ }
+ const bs=bookedSeats();
+ layout.forEach(([row,type,left,right])=>{
+   const r=document.createElement('div');r.className='row';
+   const l=document.createElement('div');l.className='row-label';l.textContent=row;
+   r.append(l,side(row,type,left,1),document.createElement('div'),side(row,type,right,10));
+   $('seating').appendChild(r);
+ });
+ $('seatStatus').textContent=`🟢 ${bs.size} seat(s) already booked for this show`;
+ update();
+}
+
+function toggle(btn,id,type){
+ if(selected.has(id)){selected.delete(id);btn.classList.remove('selected')}
+ else{selected.set(id,type);btn.classList.add('selected')}
+ update();
+}
+
+function update(){
+ let total=0;selected.forEach(t=>total+=prices[t]);
+ $('selectedSeats').textContent=selected.size?[...selected.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).join(', '):'None';
+ $('total').textContent='₹'+total;
+ $('bookBtn').disabled=!selected.size || !$('movie').value;
+}
+
+onSnapshot(bookingsRef,snap=>{
+ bookings=snap.docs.map(d=>({firestoreId:d.id,...d.data()}));
+ $('status').textContent='🟢 Firebase connected';
+ renderSeats();
+},err=>{
+ console.error(err);
+ $('status').textContent='🔴 Firebase error';
+ show('Firebase connection/config error. Check firebase-config.js and Firestore rules.',false);
+});
+
+$('movie').onchange=renderSeats;
+$('date').onchange=renderSeats;
+
+document.querySelectorAll('.showBtn').forEach(btn=>btn.onclick=()=>{
+ currentTime=btn.dataset.time;
+ document.querySelectorAll('.showBtn').forEach(x=>x.classList.remove('active'));
+ btn.classList.add('active');
+ renderSeats();
+});
+
+$('bookBtn').onclick=async()=>{
+ if(!selected.size)return;
+ const seats=[...selected.keys()];
+ const total=[...selected.values()].reduce((sum,t)=>sum+prices[t],0);
+ const bookingId='RDX'+Math.floor(100000+Math.random()*900000);
+
+ try{
+   $('bookBtn').disabled=true;
+   await addDoc(bookingsRef,{
+     bookingId,
+     key:key(),
+     movie:$('movie').value,
+     date:$('date').value,
+     time:currentTime,
+     seats,
+     total,
+     customerName:$('customer').value.trim()||'Admin/Cash Booking',
+     source:'admin',
+     status:'confirmed',
+     createdAt:serverTimestamp()
+   });
+   selected.clear();
+   $('customer').value='';
+   show(`✅ Booking ${bookingId} saved to Firebase. These seats are now booked on the main index site.`,true);
+   renderSeats();
+ }catch(err){
+   console.error(err);
+   show('❌ Booking save failed: '+err.message,false);
+   update();
+ }
+};
+
+function show(text,ok){
+ const m=$('message');
+ m.style.display='block';
+ m.className='message '+(ok?'success':'error');
+ m.textContent=text;
+}
+renderSeats();
+</script>
+</body>
+</html>
