@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rudrax Cinema — Book Tickets</title>
+<style>
+*{box-sizing:border-box}
+:root{--red:#f84464;--dark:#0f1014;--card:#17181d;--muted:#9da2ad;--line:#2a2d35}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f5f5;color:#222}
+.top{background:#333545;color:#fff;padding:7px 5%;font-size:12px}
+.header{background:#2b2d3a;color:#fff;display:flex;align-items:center;gap:28px;padding:14px 5%;position:sticky;top:0;z-index:30;box-shadow:0 3px 14px #0004}
+.logo{font-size:25px;font-weight:900;white-space:nowrap}.logo span{color:var(--red)}
+.search{flex:1;max-width:600px;background:#fff;border-radius:5px;display:flex;align-items:center;color:#777;padding:0 14px}
+.search input{border:0;outline:0;width:100%;padding:12px;background:transparent;font-size:14px}
+.location{font-size:13px;white-space:nowrap}
+.container{max-width:1250px;margin:auto;padding:22px 20px 40px}
+.hero{background:linear-gradient(110deg,#171820,#33333d);border-radius:10px;padding:30px;color:#fff;margin-bottom:20px}
+.hero h1{margin:0 0 8px;font-size:30px}.hero p{margin:0;color:#c7cad2}
+.tabs{display:flex;gap:28px;border-bottom:1px solid #ddd;margin-bottom:18px}
+.tabs button{background:none;border:0;padding:14px 4px;font-weight:700;color:#777;cursor:pointer}
+.tabs button.active{color:var(--red);border-bottom:3px solid var(--red)}
+
+.dates{display:flex;overflow:auto;border-top:1px solid #eee;border-bottom:1px solid #eee}
+.dateBtn{min-width:82px;padding:12px 8px;border:0;background:#fff;cursor:pointer;color:#555}
+.dateBtn strong{display:block;font-size:18px}.dateBtn small{display:block;font-size:11px;margin-top:4px}
+.dateBtn.active{background:var(--red);color:#fff}
+.card{background:#fff;border-radius:8px;margin-bottom:18px;box-shadow:0 2px 8px #00000012}
+.filters{padding:16px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+label{display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:6px;text-transform:uppercase}
+select,input{width:100%;background:#fff;color:#222;border:1px solid #ddd;border-radius:5px;padding:12px;font-size:14px}
+.showArea{padding:18px}.cinema{border-bottom:1px solid #eee;padding:12px 0 20px}.cinema:last-child{border:0}
+.cinemaTop{display:flex;justify-content:space-between;gap:10px;align-items:center}.cinema h3{margin:0;font-size:16px}.heart{color:#999}
+.showBtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.showBtn{background:#fff;border:1px solid #aaa;color:#333;border-radius:5px;padding:10px 16px;cursor:pointer;font-size:13px}.showBtn:hover{border-color:var(--red);color:var(--red)}
+.screenCard{padding:22px}
+.screen{height:42px;margin:5px auto 30px;max-width:650px;background:linear-gradient(#eee,#aaa);color:#333;display:flex;align-items:center;justify-content:center;border-radius:50% 50% 8px 8px/35% 35% 15% 15%;font-weight:800;letter-spacing:5px;box-shadow:0 0 30px #aaa8}
+.seating-wrap{overflow:auto}.seating{min-width:900px;display:flex;flex-direction:column;gap:8px}.row{display:grid;grid-template-columns:34px 1fr 30px 1fr;gap:8px;align-items:center}.row-label{text-align:center;font-weight:800;color:#777}.side{display:grid;gap:6px}.side.left,.side.right{grid-template-columns:repeat(9,1fr)}.side.right.short{grid-template-columns:repeat(5,1fr)}.side.plat-left-7{grid-template-columns:repeat(7,1fr)}.side.plat-right-4{grid-template-columns:repeat(4,1fr)}.side.plat-right-5{grid-template-columns:repeat(5,1fr)}
+.seat{height:34px;border:1px solid #aaa;border-radius:5px;background:#eee;color:#333;font-weight:700;font-size:11px;cursor:pointer}.seat.gold{background:#e2a72d;border-color:#c68d18}.seat.platinum{background:#d94a45;color:#fff;border-color:#bd332e}.seat.selected{background:#22c55e!important;border-color:#16a34a!important;color:#fff}.seat.booked{background:#777!important;color:#ccc;border-color:#666;cursor:not-allowed}
+.legend{display:flex;justify-content:center;flex-wrap:wrap;gap:16px;margin-top:18px;color:#666;font-size:12px}.dot{width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:5px}
+.bottom{position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;padding:14px 5%;z-index:20;display:flex;align-items:center;justify-content:center}.summaryInner{width:min(1200px,100%);display:flex;align-items:center;justify-content:space-between;gap:20px}.selectedInfo{font-size:13px;color:#555}.selectedInfo b{color:#222}.total{font-size:20px;font-weight:900}.primary{background:var(--red);color:#fff;border:0;border-radius:5px;padding:14px 34px;font-weight:800;cursor:pointer}.primary:disabled{opacity:.45;cursor:not-allowed}
+.modal{display:none;position:fixed;inset:0;background:#000b;z-index:60;align-items:center;justify-content:center;padding:18px}.modal-box{width:min(470px,100%);background:#fff;border-radius:10px;padding:22px}.close{float:right;background:none;border:0;font-size:25px;cursor:pointer}.success{padding:12px;border-radius:7px;margin-top:12px;display:none}
+.info{font-size:12px;color:#888;padding:0 18px 18px}
+@media(max-width:800px){.header{flex-wrap:wrap;gap:12px}.search{order:3;flex-basis:100%;max-width:none}.filters{grid-template-columns:1fr}.summaryInner{align-items:stretch}.bottom{padding:12px}.summaryInner{flex-direction:column;gap:8px}.primary{width:100%}.hero h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="top">🎬 Rudrax Cinema • Online Ticket Booking</div>
+<header class="header">
+  <div class="logo">RUDRAX<span>CINEMA</span></div>
+  <div class="search">🔍 <input id="searchMovie" placeholder="Search for Movies, Events, Plays..." oninput="filterMovies()"></div>
+  <div class="location">📍 Una, Gujarat ▾</div>
+</header>
+
+<main class="container">
+<div style="display:none">
+<select id="movie"><option value="AWARAPAN 2">AWARAPAN 2</option><option>JANA NAYAGAN</option></select>
+<input id="date" type="date">
+<select id="time">
+<option>12:00 PM - 03:00 PM</option><option>03:00 PM - 06:00 PM</option>
+<option>06:00 PM - 09:00 PM</option><option>09:00 PM - 12:00 AM</option>
+</select>
+</div>
+
+<section class="card">
+  <div style="padding:16px 16px 0">
+    <label>Select Date</label>
+  </div>
+  <div class="dates" id="dateStrip"></div>
+</section>
+
+<section class="card">
+  <div class="showArea">
+    <div class="cinema">
+      <div class="cinemaTop">
+        <div>
+          <h3>Rudrax Cinema — Una</h3>
+          <small style="color:#888">Select your show time</small>
+        </div>
+        <span class="heart">♡</span>
+      </div>
+      <div class="showBtns">
+        <button class="showBtn" onclick="pickShow('12:00 PM - 03:00 PM')">12:00 PM</button>
+        <button class="showBtn" onclick="pickShow('03:00 PM - 06:00 PM')">03:00 PM</button>
+        <button class="showBtn" onclick="pickShow('06:00 PM - 09:00 PM')">06:00 PM</button>
+        <button class="showBtn" onclick="pickShow('09:00 PM - 12:00 AM')">09:00 PM</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card screenCard">
+    <h2 style="margin:0 0 4px">Select Seats</h2>
+    <div style="font-size:12px;color:#888;margin-bottom:20px">Choose your seats below</div>
+    <div class="screen">SCREEN</div>
+    <div class="seating-wrap"><div id="seating" class="seating"></div></div>
+    <div class="legend">
+      <span><i class="dot" style="background:#eee"></i>Silver ₹150</span>
+      <span><i class="dot" style="background:#e2a72d"></i>Gold ₹200</span>
+      <span><i class="dot" style="background:#d94a45"></i>Platinum ₹250</span>
+      <span><i class="dot" style="background:#22c55e"></i>Selected</span>
+      <span><i class="dot" style="background:#777"></i>Sold</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div style="padding:18px 18px 4px"><h2 style="margin:0">Show-wise booked seats</h2><div id="onlineStatus" style="font-size:12px;color:#777;margin-top:5px">🟡 Connecting to online booking database…</div></div>
+    <div class="info">
+      12–3: <b id="booked12to3">None</b> &nbsp; | &nbsp;
+      3–6: <b id="booked3to6">None</b> &nbsp; | &nbsp;
+      6–9: <b id="booked6to9">None</b> &nbsp; | &nbsp;
+      9–12: <b id="booked9to12">None</b>
+    </div>
+  </section>
+</main>
+
+<div class="bottom">
+  <div class="summaryInner">
+    <div class="selectedInfo">
+      <div style="font-weight:800;margin-bottom:8px">Booking Details</div>
+      <div>Selected Seats: <b id="selectedSeats">None</b></div>
+      <div style="margin-top:5px;color:#777">
+        Silver: <span id="silverCount">0 × ₹150</span> •
+        Gold: <span id="goldCount">0 × ₹200</span> •
+        Platinum: <span id="platCount">0 × ₹250</span>
+      </div>
+    </div>
+    <div class="total" id="total">₹0</div>
+    <button class="primary" id="bookBtn" disabled>Proceed to Booking</button>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <button class="close" onclick="closeModal()">×</button>
+    <h2>Complete Booking</h2>
+    <label>Name</label><input id="name" placeholder="Enter customer name">
+    <br><br>
+    <label>Mobile Number</label><input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
+    <div id="modalSummary" style="margin-top:14px;color:#666"></div>
+    <div style="margin-top:16px"><button class="primary" style="width:100%;background:#16a34a" onclick="confirmWhatsAppBooking()">📱 Send Booking Request</button></div>
+    
+    <div style="font-size:12px;color:#888;margin-top:10px">Note: Sending this request does not reserve the seats. Your ticket is confirmed only after Rudrax Cinema Admin confirms the booking.</div>
+    <div class="success" id="success"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import "./firebase-config.js";
+const app = initializeApp(window.RUDRAX_FIREBASE_CONFIG);
+const db = getFirestore(app);
+const bookingsRef = collection(db, "bookings");
+
+const prices={Silver:150,Gold:200,Platinum:250};
+const layout=[
+  {row:'K',type:'Silver',left:9,right:9},
+  {row:'J',type:'Silver',left:9,right:9},
+  {row:'I',type:'Silver',left:9,right:9},
+  {row:'H',type:'Silver',left:9,right:9},
+  {row:'G',type:'Gold',left:9,right:9},
+  {row:'F',type:'Gold',left:9,right:9},
+  {row:'E',type:'Gold',left:9,right:9},
+  {row:'D',type:'Gold',left:9,right:9},
+  {row:'C',type:'Gold',left:9,right:5},
+  {row:'B',type:'Platinum',left:7,right:4},
+  {row:'A',type:'Platinum',left:9,right:5}
+];
+const seating=document.getElementById('seating');
+const selected=new Map();
+const BOOKING_STORAGE_KEY = 'rudraxCinemaBookingsV1';
+
+let ONLINE_BOOKINGS = [];
+function getAllBookings(){ return ONLINE_BOOKINGS; }
+
+function startRealtimeBookings(){
+  onSnapshot(bookingsRef, snap=>{
+    ONLINE_BOOKINGS = snap.docs.map(d=>({firestoreId:d.id,...d.data()}));
+    const st=document.getElementById("onlineStatus"); if(st) st.textContent="🟢 Online booking database connected";
+    renderSeats();
+  }, err=>{
+    console.error("Firestore listener error:", err); const st=document.getElementById("onlineStatus"); if(st) st.textContent="🔴 Database connection error";
+  });
+}
+
+function currentBookingKey(){
+  return [
+    document.getElementById('movie').value,
+    document.getElementById('date').value,
+    document.getElementById('time').value
+  ].join('|');
+}
+
+function getBookedForCurrentShow(){
+  const key = currentBookingKey();
+  const seats = new Set();
+  getAllBookings()
+    .filter(b => b.key === key)
+    .forEach(b => (b.seats || []).forEach(seat => seats.add(seat)));
+  return seats;
+}
+
+let booked = getBookedForCurrentShow();
+
+function makeSide(row,type,count,start){
+  const side=document.createElement('div');
+  side.className='side '+(count===5?'short ':'')+
+    (type==='Platinum'&&count===7?'plat-left-7 ':'')+
+    (type==='Platinum'&&count===4?'plat-right-4 ':'')+
+    (type==='Platinum'&&count===5?'plat-right-5 ':'')+
+    (start===1?'left':'right');
+  for(let i=0;i<count;i++){
+    const n=start+i;
+    const id=row+n;
+    const s=document.createElement('button');
+    s.type='button'; s.className='seat '+type.toLowerCase();
+    s.textContent=n; s.dataset.id=id; s.dataset.type=type;
+    if(booked.has(id)) {s.classList.add('booked'); s.disabled=true;}
+    else s.addEventListener('click',()=>toggle(s));
+    side.appendChild(s);
+  }
+  return side;
+}
+function renderSeats(){
+  seating.innerHTML='';
+  booked = getBookedForCurrentShow();
+  selected.clear();
+  layout.forEach(x=>{
+  const r=document.createElement('div'); r.className='row';
+  const lab=document.createElement('div'); lab.className='row-label'; lab.textContent=x.row;
+  r.appendChild(lab);
+  r.appendChild(makeSide(x.row,x.type,x.left,1));
+  const aisle=document.createElement('div'); aisle.className='aisle'; r.appendChild(aisle);
+  r.appendChild(makeSide(x.row,x.type,x.right,10));
+  seating.appendChild(r);
+  });
+  update();
+  updateBookedSections();
+}
+
+function updateBookedSections(){
+  const selectedDate = document.getElementById('date').value;
+  const selectedMovie = document.getElementById('movie').value;
+  const times = [
+    '12:00 PM - 03:00 PM',
+    '03:00 PM - 06:00 PM',
+    '06:00 PM - 09:00 PM',
+    '09:00 PM - 12:00 AM'
+  ];
+  const ids = ['booked12to3','booked3to6','booked6to9','booked9to12'];
+
+  ids.forEach((id,i)=>{
+    const seats = new Set();
+    getAllBookings()
+      .filter(b => b.date === selectedDate && b.movie === selectedMovie && b.time === times[i])
+      .forEach(b => (b.seats || []).forEach(seat => seats.add(seat)));
+
+    const arr = [...seats].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    document.getElementById(id).textContent = arr.length ? arr.join(', ') : 'None';
+  });
+}
+
+document.getElementById('time').addEventListener('change', renderSeats);
+document.getElementById('movie').addEventListener('change', renderSeats);
+document.getElementById('date').addEventListener('change', renderSeats);
+startRealtimeBookings();
+
+function toggle(btn){
+  const id=btn.dataset.id,type=btn.dataset.type;
+  if(selected.has(id)){selected.delete(id);btn.classList.remove('selected')}
+  else {selected.set(id,type);btn.classList.add('selected')}
+  update();
+}
+function update(){
+  let counts={Silver:0,Gold:0,Platinum:0}, subtotal=0;
+  selected.forEach(t=>{counts[t]++;subtotal+=prices[t]});
+  const seats=[...selected.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  document.getElementById('selectedSeats').textContent=seats.length?seats.join(', '):'None';
+  document.getElementById('silverCount').textContent=`${counts.Silver} × ₹150`;
+  document.getElementById('goldCount').textContent=`${counts.Gold} × ₹200`;
+  document.getElementById('platCount').textContent=`${counts.Platinum} × ₹250`;
+  document.getElementById('total').textContent=`₹${subtotal}`;
+  document.getElementById('bookBtn').disabled=!seats.length;
+}
+// Allow booking only from today through the next 7 days (inclusive).
+const dateInput=document.getElementById('date');
+const today=new Date();
+const pad=n=>String(n).padStart(2,'0');
+const toISO=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+dateInput.min=toISO(today);
+const maxDate=new Date(today); maxDate.setDate(maxDate.getDate()+7);
+dateInput.max=toISO(maxDate);
+dateInput.value=toISO(today);
+
+document.getElementById('bookBtn').onclick=()=>{
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('modalSummary').textContent=`${selected.size} seat(s) selected • ${document.getElementById('selectedSeats').textContent} • Total ${document.getElementById('total').textContent}`;
+};
+function closeModal(){document.getElementById('modal').style.display='none'}
+function getBookingData(){
+  const name=document.getElementById('name').value.trim();
+  const mobile=document.getElementById('mobile').value.trim();
+  if(!name || !/^\d{10}$/.test(mobile)){
+    showMessage('Please enter a valid name and 10-digit mobile number.', false);
+    return null;
+  }
+  if(!document.getElementById('movie').value){
+    showMessage('Please select a movie first.', false);
+    return null;
+  }
+  const booking='RDX'+Math.floor(100000+Math.random()*900000);
+  const movie=document.getElementById('movie').value;
+  const date=document.getElementById('date').value;
+  const time=document.getElementById('time').value;
+  const seats=[...selected.keys()].join(', ');
+  const total=document.getElementById('total').textContent;
+  return {booking,name,mobile,movie,date,time,seats,total};
+}
+
+function showMessage(text, ok=true){
+  const success=document.getElementById('success');
+  success.style.display='block';
+  success.style.background=ok?'#102819':'#3a2010';
+  success.style.borderColor=ok?'#2f8a4b':'#a66a25';
+  success.innerHTML=text;
+}
+
+function whatsappURLFor(data){
+  const whatsappNumber='919978999573';
+  const message =
+`🎬 RUDRAX CINEMA - BOOKING REQUEST
+
+🎟️ Booking ID: ${data.booking}
+👤 Customer Name: ${data.name}
+📱 Customer Mobile: ${data.mobile}
+
+🎞️ Movie: ${data.movie}
+📅 Date: ${data.date}
+🕐 Show Time: ${data.time}
+
+💺 Seats: ${data.seats}
+💰 Total Amount: ${data.total}
+
+⏳ Status: Booking request — please confirm availability.`;
+  return 'https://wa.me/'+whatsappNumber+'?text='+encodeURIComponent(message);
+}
+
+function paymentDone(){
+  const data=window.currentBooking;
+  if(!data) return;
+
+  // Front-end confirmation only. Real payment verification requires a payment gateway/backend.
+  showMessage(`Payment marked as done!<br><b>Booking ID: ${data.booking}</b><br>Seats: ${data.seats}<br>Total: ${data.total}`, true);
+
+  setTimeout(()=>{
+    window.open(whatsappURLFor(data),'_blank');
+  },500);
+}
+
+function confirmWhatsAppBooking(){
+  const data=getBookingData();
+  if(!data) return;
+  window.currentBooking=data;
+  showMessage(`Booking request ready.<br><b>Request ID: ${data.booking}</b><br>WhatsApp will open with the request details. Ticket is NOT confirmed until Admin books it.`, true);
+  setTimeout(()=>{
+    window.open(whatsappURLFor(data),'_blank');
+  },300);
+}
+
+renderSeats();
+
+/* BookMyShow-style UI helpers */
+function filterMovies(){
+  const q=document.getElementById('searchMovie').value.toLowerCase();
+  const sel=document.getElementById('movie');
+  [...sel.options].forEach((o,i)=>{ if(i) o.hidden=!!q && !o.text.toLowerCase().includes(q); });
+}
+function pickShow(t){document.getElementById('time').value=t;renderSeats();}
+
+function buildDateStrip(){
+  const strip=document.getElementById('dateStrip');
+  if(!strip) return;
+  const base=new Date();
+  strip.innerHTML='';
+  for(let i=0;i<8;i++){
+    const d=new Date(base);
+    d.setDate(base.getDate()+i);
+    const iso=toISO(d);
+    const b=document.createElement('button');
+    b.className='dateBtn'+(i===0?' active':'');
+    b.innerHTML=`<strong>${d.getDate()}</strong><small>${d.toLocaleDateString('en-IN',{weekday:'short'})}</small>`;
+    b.onclick=()=>{
+      document.getElementById('date').value=iso;
+      [...strip.children].forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderSeats();
+    };
+    strip.appendChild(b);
+  }
+}
+buildDateStrip();
+
+</script>
+</body>
+</html>
