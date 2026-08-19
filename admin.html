@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rudrax Cinema - Admin Booking</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0b0d12;color:#fff}
+header{background:linear-gradient(135deg,#b40000,#ef2b2b);padding:18px 20px;font-weight:900}
+main{max-width:1100px;margin:auto;padding:18px}.card{background:#151922;border:1px solid #292e3a;border-radius:16px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:750px){.grid{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:12px;color:#aeb5c3;margin-bottom:6px}
+select,input{width:100%;padding:12px;border-radius:9px;border:1px solid #343a49;background:#0e1118;color:#fff}
+button{border:0;border-radius:9px;padding:12px 14px;font-weight:800;cursor:pointer}
+.primary{background:#16a34a;color:#fff}.danger{background:#dc2626;color:#fff}.secondary{background:#374151;color:#fff}
+.seats{display:flex;flex-direction:column;gap:8px;margin-top:12px;overflow:auto;padding-bottom:8px}
+.seat{padding:9px 2px;font-size:11px;background:#eceff2;color:#111}.seat.selected{background:#22c55e}.seat.booked{background:#4b5563;color:#c7ccd6;cursor:not-allowed}
+@media(max-width:600px){.seats{grid-template-columns:repeat(7,1fr)}}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid #292e3a}
+.notice{padding:12px;border-radius:10px;background:#102819;border:1px solid #2f8a4b;margin-top:12px;display:none}
+.small{color:#9ca3af;font-size:12px}
+</style>
+</head>
+<body>
+<header>🎬 RUDRAX CINEMA — ADMIN BOOKING PANEL</header>
+<main>
+<section class="card">
+<h2>New Booking</h2>
+<div class="grid">
+<div><label>Movie</label><select id="movie"><option value="">Select Movie</option><option>AWARAPAN 2</option><option>JANA NAYAGAN</option></select></div>
+<div><label>Date</label><input id="date" type="date"></div>
+<div><label>Show Time</label><select id="time">
+<option>12:00 PM - 03:00 PM</option><option>03:00 PM - 06:00 PM</option>
+<option>06:00 PM - 09:00 PM</option><option>09:00 PM - 12:00 AM</option>
+</select></div>
+<div><label>Customer Name</label><input id="name" placeholder="Customer name"></div>
+<div><label>Mobile</label><input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit number"></div>
+</div>
+<p class="small">Select seats to CONFIRM a customer request. Grey seats are already confirmed/booked online for the selected movie/date/show.</p>
+<div id="seats" class="seats"></div>
+<div id="summary" class="small" style="margin-top:12px">No seats selected</div>
+<div class="actions">
+<button class="primary" onclick="saveBooking()">✅ Confirm Booking</button>
+<button class="secondary" onclick="clearSelection()">Clear</button>
+</div>
+<div id="notice" class="notice"></div>
+</section>
+
+<section class="card">
+<h2>Confirmed Bookings</h2><div class="small">Only bookings confirmed here are saved online and shown as Sold/Grey on the customer website.</div>
+<div class="actions">
+<button class="secondary" onclick="exportData()">Export Bookings</button>
+<label style="display:inline-block"><input id="importFile" type="file" accept=".json" style="display:none" onchange="importData(event)"><button class="secondary" onclick="document.getElementById('importFile').click()">Import Bookings</button></label>
+<button class="danger" onclick="clearAll()">Delete All Bookings</button>
+</div>
+<div style="overflow:auto;margin-top:12px"><table><thead><tr><th>ID</th><th>Customer</th><th>Movie</th><th>Date</th><th>Show</th><th>Seats</th><th>Total</th><th></th></tr></thead><tbody id="bookingRows"></tbody></table></div>
+</section>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import {
+  getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, writeBatch
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import "./firebase-config.js";
+
+const app = initializeApp(window.RUDRAX_FIREBASE_CONFIG);
+const db = getFirestore(app);
+const bookingsRef = collection(db, "bookings");
+
+const prices = {Silver:150, Gold:200, Platinum:250};
+
+// EXACTLY the same seat layout used by index(2).html
+const layout = [
+  ['K','Silver',9,9], ['J','Silver',9,9], ['I','Silver',9,9], ['H','Silver',9,9],
+  ['G','Gold',9,9], ['F','Gold',9,9], ['E','Gold',9,9], ['D','Gold',9,9],
+  ['C','Gold',9,5], ['B','Platinum',7,4], ['A','Platinum',9,5]
+];
+
+let bookings = [];
+let selected = new Set();
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+const today = new Date();
+const maxDate = new Date(today);
+maxDate.setDate(maxDate.getDate()+6);
+$('date').min = iso(today);
+$('date').max = iso(maxDate);
+$('date').value = iso(today);
+
+function bookingKey() {
+  return [$('movie').value, $('date').value, $('time').value].join('|');
+}
+
+function bookedSeats() {
+  const s = new Set();
+  bookings
+    .filter(b => b.key === bookingKey())
+    .forEach(b => (b.seats || []).forEach(seat => s.add(seat)));
+  return s;
+}
+
+function seatType(row) {
+  const found = layout.find(x => x[0] === row);
+  return found ? found[1] : 'Silver';
+}
+
+function makeSide(row, type, count, start) {
+  const side = document.createElement('div');
+  side.className =
+    'side ' +
+    (count === 9 ? 'n9' :
+     count === 7 ? 'n7' :
+     count === 5 ? 'n5' : 'n4');
+
+  const booked = bookedSeats();
+
+  for (let i = 0; i < count; i++) {
+    const id = row + (start + i);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'seat ' + type.toLowerCase();
+    btn.textContent = start + i;
+
+    if (booked.has(id)) {
+      btn.classList.add('booked');
+      btn.disabled = true;
+      btn.title = 'Already booked';
+    } else {
+      btn.onclick = () => {
+        if (selected.has(id)) {
+          selected.delete(id);
+          btn.classList.remove('selected');
+        } else {
+          selected.add(id);
+          btn.classList.add('selected');
+        }
+        updateSummary();
+      };
+    }
+
+    side.appendChild(btn);
+  }
+  return side;
+}
+
+function renderSeats() {
+  selected.clear();
+  const container = $('seats');
+  container.innerHTML = '';
+
+  layout.forEach(([row, type, left, right]) => {
+    const rowWrap = document.createElement('div');
+    rowWrap.style.display = 'grid';
+    rowWrap.style.gridTemplateColumns = '30px 1fr 24px 1fr';
+    rowWrap.style.gap = '7px';
+    rowWrap.style.minWidth = '700px';
+
+    const label = document.createElement('div');
+    label.textContent = row;
+    label.style.textAlign = 'center';
+    label.style.fontWeight = 'bold';
+    label.style.color = '#aaa';
+
+    rowWrap.append(
+      label,
+      makeSide(row, type, left, 1),
+      document.createElement('div'),
+      makeSide(row, type, right, 10)
+    );
+
+    container.appendChild(rowWrap);
+  });
+
+  updateSummary();
+}
+
+function total() {
+  let amount = 0;
+  selected.forEach(id => amount += prices[seatType(id[0])]);
+  return amount;
+}
+
+function updateSummary() {
+  $('summary').textContent = selected.size
+    ? `${selected.size} seat(s): ${[...selected].sort((a,b) =>
+        a.localeCompare(b, undefined, {numeric:true})
+      ).join(', ')} • Total ₹${total()}`
+    : 'No seats selected';
+}
+
+function show(msg) {
+  $('notice').textContent = msg;
+  $('notice').style.display = 'block';
+  setTimeout(() => $('notice').style.display = 'none', 3500);
+}
+
+window.clearSelection = () => {
+  selected.clear();
+  renderSeats();
+};
+
+window.saveBooking = async () => {
+  try {
+    const movie = $('movie').value;
+    const date = $('date').value;
+    const time = $('time').value;
+    const name = $('name').value.trim();
+    const mobile = $('mobile').value.trim();
+
+    if (!movie) return show('Select a movie.');
+    if (!date) return show('Select a date.');
+    if (!name) return show('Enter customer name.');
+    if (!/^\d{10}$/.test(mobile)) return show('Enter a valid 10-digit mobile number.');
+    if (!selected.size) return show('Select at least one seat.');
+
+    const alreadyBooked = bookedSeats();
+    for (const seat of selected) {
+      if (alreadyBooked.has(seat)) {
+        show(`Seat ${seat} is already booked. Please select another seat.`);
+        renderSeats();
+        return;
+      }
+    }
+
+    const id = 'RDX' + Math.floor(100000 + Math.random() * 900000);
+
+    const booking = {
+      id,
+      key: bookingKey(),
+      movie,
+      date,
+      time,
+      name,
+      mobile,
+      seats: [...selected].sort((a,b) =>
+        a.localeCompare(b, undefined, {numeric:true})
+      ),
+      total: total(),
+      createdAt: new Date().toISOString()
+    };
+
+    await addDoc(bookingsRef, booking);
+
+    show(`Booking ${id} confirmed and saved to Firebase.`);
+    selected.clear();
+    $('name').value = '';
+    $('mobile').value = '';
+    renderSeats();
+  } catch (err) {
+    console.error('SAVE BOOKING ERROR:', err);
+    show('Booking save failed. Check Firebase configuration/rules.');
+  }
+};
+
+function renderTable() {
+  $('bookingRows').innerHTML = '';
+
+  bookings.slice().reverse().forEach(b => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${b.id || ''}</td>
+       <td>${b.name || ''}<br>${b.mobile || ''}</td>
+       <td>${b.movie || ''}</td>
+       <td>${b.date || ''}</td>
+       <td>${b.time || ''}</td>
+       <td>${(b.seats || []).join(', ')}</td>
+       <td>₹${b.total || 0}</td>
+       <td><button class="danger" data-id="${b.firestoreId}">Delete</button></td>`;
+
+    tr.querySelector('button').onclick = () => removeBooking(b.firestoreId);
+    $('bookingRows').appendChild(tr);
+  });
+}
+
+async function removeBooking(id) {
+  try {
+    await deleteDoc(doc(db, "bookings", id));
+    show('Booking deleted.');
+  } catch (err) {
+    console.error(err);
+    show('Could not delete booking.');
+  }
+}
+
+window.removeBooking = removeBooking;
+
+window.clearAll = async () => {
+  if (!confirm('Delete all bookings?')) return;
+
+  try {
+    const batch = writeBatch(db);
+    bookings.forEach(b => {
+      if (b.firestoreId) batch.delete(doc(db, "bookings", b.firestoreId));
+    });
+    await batch.commit();
+    show('All bookings deleted.');
+  } catch (err) {
+    console.error(err);
+    show('Could not delete bookings.');
+  }
+};
+
+window.exportData = () => {
+  const blob = new Blob([JSON.stringify(bookings, null, 2)], {
+    type: 'application/json'
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rudrax-bookings.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+window.importData = event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error('Invalid JSON');
+
+      const batch = writeBatch(db);
+
+      data.forEach(b => {
+        const ref = doc(bookingsRef);
+        const {firestoreId, ...cleanBooking} = b;
+        batch.set(ref, cleanBooking);
+      });
+
+      await batch.commit();
+      show('Bookings imported successfully.');
+    } catch (err) {
+      console.error(err);
+      show('Invalid booking file or Firebase error.');
+    }
+  };
+
+  reader.readAsText(file);
+};
+
+// REAL-TIME FIREBASE LISTENER
+onSnapshot(bookingsRef, snapshot => {
+  bookings = snapshot.docs.map(d => ({
+    firestoreId: d.id,
+    ...d.data()
+  }));
+
+  renderSeats();
+  renderTable();
+
+  console.log('Rudrax Firebase bookings updated:', bookings.length);
+}, error => {
+  console.error('FIREBASE LISTENER ERROR:', error);
+  $('seats').innerHTML =
+    '<div style="padding:20px;color:#ff7777;font-weight:bold">' +
+    'Firebase connection error. Check firebase-config.js and Firestore rules.' +
+    '</div>';
+  show('Firebase connection/config error. Open browser Console for details.');
+});
+
+$('movie').onchange = renderSeats;
+$('date').onchange = renderSeats;
+$('time').onchange = renderSeats;
+
+renderSeats();
+</script>
+</body>
+</html>
